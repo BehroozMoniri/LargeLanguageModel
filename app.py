@@ -9,13 +9,13 @@ st.set_page_config(page_title="Sentiment Classifier", page_icon="🤖")
 st.title("🤖 LLM Comment Classifier")
 
 # CRITICAL: Ensure this matches your preprocessing.py EXACTLY
-MAX_LEN = 40  # Change this if your preprocessing used a different number!
+MAX_LEN = 60  # Change this if your preprocessing used a different number!
 
 
 @st.cache_resource
 def load_assets():
     # Load the model and tokenizer
-    model = tf.keras.models.load_model("sentiment_model.keras")
+    model = tf.keras.models.load_model("sentiment_model_v2.keras")
     with open("tokenizer.pkl", "rb") as f:
         tokenizer = pickle.load(f)
     return model, tokenizer
