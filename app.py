@@ -5,27 +5,32 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-# --- Page Config ---
 st.set_page_config(page_title="Sentiment Classifier", page_icon="🤖")
 st.title("🤖 LLM Comment Classifier")
-st.write("Type a comment below and the model will classify it as Negative, Neutral, or Positive.")
+
+# CRITICAL: Ensure this matches your preprocessing.py EXACTLY
+MAX_LEN = 40  # Change this if your preprocessing used a different number!
 
 
-# --- Load Model & Tokenizer (Cached so it doesn't reload every time) ---
 @st.cache_resource
 def load_assets():
+    # Load the model and tokenizer
     model = tf.keras.models.load_model("sentiment_model.keras")
     with open("tokenizer.pkl", "rb") as f:
         tokenizer = pickle.load(f)
     return model, tokenizer
 
 
-model, tokenizer = load_assets()
-MAX_LEN = 60
+try:
+    model, tokenizer = load_assets()
+    st.success("Model and Tokenizer loaded successfully!")
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+    st.stop()
+
 LABELS = {0: "Negative", 1: "Neutral", 2: "Positive"}
 
 
-# --- Clean Text Function (From your predict.py) ---
 def clean_text(text):
     text = str(text).lower()
     text = re.sub(r"http\S+|www\.\S+", "", text)
@@ -35,28 +40,24 @@ def clean_text(text):
     return text
 
 
-# --- UI Input ---
-user_input = st.text_area("Enter your comment here:", "This app is absolutely amazing!")
+user_input = st.text_area("Enter your comment here:", "This is terrible and I hate it.")
 
 if st.button("Classify"):
     if user_input.strip():
-        # Preprocess
-        seq = tokenizer.texts_to_sequences([clean_text(user_input)])
+        cleaned = clean_text(user_input)
+
+        # Debugging: Show the cleaned text to the user
+        st.write(f"**Cleaned Text:** `{cleaned}`")
+
+        seq = tokenizer.texts_to_sequences([cleaned])
         padded = pad_sequences(seq, maxlen=MAX_LEN, padding="post", truncating="post")
 
-        # Predict
         probs = model.predict(padded, verbose=0)[0]
         idx = int(np.argmax(probs))
 
-        # Display Results
-        st.subheader(f"Prediction: **{LABELS[idx]}**")
+        st.subheader(f"Prediction: {LABELS[idx]}")
         st.write(f"Confidence: {probs[idx] * 100:.2f}%")
 
-        # Show probabilities
-        st.bar_chart({
-            "Negative": probs[0],
-            "Neutral": probs[1],
-            "Positive": probs[2]
-        })
-    else:
-        st.warning("Please enter a comment first.")
+        # Show the raw probabilities to see if the model is confused
+        st.write("Raw Probabilities:")
+        st.json({LABELS[i]: float(probs[i]) for i in range(3)})
